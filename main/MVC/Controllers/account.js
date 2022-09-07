@@ -30,6 +30,7 @@ class AccountController {
 
   async handleLogin(req, res) {
     const { username, password, role } = req.body;
+    // console.log({});
     let result = false;
     let token = "";
     let refreshToken = "";
@@ -51,11 +52,16 @@ class AccountController {
           _id,
           accessToken: refreshToken,
         });
+      } else {
+        return res.json({
+          error: true,
+          message: "Password incorrect",
+        });
       }
     } else {
       return res.json({
-        err: true,
-        message: "Username or Password incorrect",
+        error: true,
+        message: "Username incorrect",
       });
     }
 

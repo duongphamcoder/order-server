@@ -12,21 +12,23 @@ class CartController {
           product_id,
           quantity,
         });
+        console.log("add", result);
         const message = {
           error: !respone,
           message: respone ? "Add to cart success" : "Add to cart failed",
         };
         return res.json(message);
       }
+      console.log("update", result);
       const newQuantity = +quantity + result.quantity;
+      console.log(`user_id ${user_id} quantity new ${newQuantity} `);
       const respone = await CartModel.updateQuantity({
-        user_id,
-        product_id,
+        _id: result._id,
         quantity: newQuantity,
       });
       const message = {
         error: !respone,
-        message: respone ? "Add to cart success" : "Add to cart failed",
+        message: respone ? "Add to cart success1" : "Add to cart failed1",
         newQuantity,
       };
       return res.json(message);
@@ -37,72 +39,51 @@ class CartController {
     try {
       const { _id } = req.user;
       const result = await CartModel.retrieveAllUnpaidProductsByUserID(_id);
-      const promises = result.map((item) =>
-        ProductModel.findById(item.product_id)
-      );
-      const respone = await Promise.all(promises);
-      const newRespone = respone.map((item, index) => {
-        const {
-          _id,
-          name,
-          price,
-          photoURL,
-          category_id,
-          createdAt,
-          updatedAt,
-        } = item;
-        return {
-          _id,
-          name,
-          price,
-          photoURL,
-          category_id,
-          createdAt,
-          updatedAt,
-          cart_id: result[index]._id,
-        };
-      });
-      let quantitys = {};
-      result.forEach((item) => {
-        quantitys[`${item._id}`] = item.quantity;
-      });
-      const prices = respone.map(
-        (item, index) => item.price * quantitys[`${item._id}`]
-      );
-      const total = prices.reduce((prev, curent) => prev + curent);
-      return res.json({
-        result: newRespone,
-        quantitys,
-        prices,
-        total,
-        cart: result,
-      });
+      if (result.length) {
+        const promises = await result.map((item, index) =>
+          ProductModel.findById(item.product_id)
+        );
+        const products = await Promise.all(promises);
+        const data = products.map((item, index) => {
+          const obj = {
+            _id: item._id,
+            name: item.name,
+            price: item.price,
+            category_id: item.category_id,
+            photoURL: item.photoURL,
+            cart_id: result[index]._id.toString(),
+          };
+          return obj;
+        });
+        const quantitys = {};
+        data.forEach((item, index) => {
+          quantitys[`${result[index]._id.toString()}`] = parseInt(
+            result[index].quantity
+          );
+        });
+        return res.json({
+          result: data,
+          quantitys,
+        });
+      }
     } catch (error) {
       console.log(error);
     }
   }
 
+  async handleUpdateQuantity(req, res) {
+    const { cart_id, quantity } = req.body;
+    const result = await CartModel.updateQuantity({ _id: cart_id, quantity });
+    return res.json({ result });
+  }
+
   async handlePayemnt(req, res) {
     try {
-      const { quantitys } = req.body;
       const { _id } = req.user;
-      const temps = Object.keys(quantitys);
-      const promises = temps.map((item, index) =>
-        CartModel.updateQuantity({
-          _id: item,
-          quantity: parseInt(quantitys[item]),
-        })
-      );
-      const respone = await Promise.all(promises);
-      const checkPayment = respone.includes(false);
-      if (!checkPayment) {
-        const payemnt = await CartModel.updateStatus(_id);
-      }
-      const message = {
-        error: checkPayment,
-        message: !checkPayment ? "Payment success" : "Payment failed",
-      };
-      return res.json(message);
+      console.log(_id);
+      const user_id = _id;
+      const result = await CartModel.updateStatus(user_id);
+      return res.json({ error: !result });
     } catch (error) {
       console.log(error);
     }

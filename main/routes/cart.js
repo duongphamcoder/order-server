@@ -9,6 +9,11 @@ Routes.post(
   CartController.handleCreateCart
 );
 Routes.put("/payment", authorization.verifyToken, CartController.handlePayemnt);
+Routes.put(
+  "/update-quantity",
+  authorization.verifyToken,
+  CartController.handleUpdateQuantity
+);
 Routes.delete(
   "/delete",
   authorization.verifyToken,
